@@ -1,0 +1,141 @@
+DOCKER
+docker container run -it --name=test1 testbox:1.01
+  -> creo un nuovo container chiamato test1
+  -> nomino la disk image come "testbox:1.01" dove "testbox" è il nome e "1.01" è la versione della mia immagine
+
+docker container ls
+  -> visualizzo l'elenco dei container "up and running"
+
+docker container ls -a
+  -> visualizzo l'elenco dei container (compresi quelli stoppati)
+
+docker container attach test1
+  -> mi collego in shell di un container "up and running"
+
+docker container start test1
+  -> avvio il container "test1"
+
+docker container stop test1
+  -> stoppo il container "test1"
+
+docker container rm test1
+  -> elimino il container test1
+
+docker container inspect test1
+  -> visualizzo tutti i dettagli del container
+
+docker container exec -i -t test1 /bin/sh
+  -> eseguo un comando in un container già "up and running"
+    - "-i" sta ad indicare che vogliamo usare il processo nuovo in modo interattivo
+    - "-t" sta ad indicare che vogliamo utilizza la TTY (terminal emulato)
+    - "/bin/sh" è il processo da lanciare ovvero la shell
+
+docker container diff test1
+  -> visualizzo le differenze rispetto alla base image del container "test1"
+
+docker container commit test1 my-test1
+  -> creo una "image personale" dal container "test1"
+
+docker image history my-test1
+  -> visualizzo i dettagli di come è stata costruita la mia image
+
+docker network ls
+  -> visualizzo le reti docker disponibili
+    - none -> il container non avrà accesso a nessun servizio di rete
+    - host -> il container avrà accesso alla rete direttamente sulla medesima rete dell'host in cui sta girando
+    - bridge -> default network
+DNS container server: 127.0.0.11
+
+creare una network dedicata
+docker network create --driver bridge frontend
+docker network create --driver bridge backend
+
+associare network a container esistente
+docker container run - it netwrok= frontend -d --name=from testbox:1.01
+
+--DOCKERFILE-- (ogni keyword delle seguenti è un parametro impostabile nel Dockerfile)
+FROM keyword
+-> inidica l'immagine da cui voglio partire per creare il container es.: FROM centos:7
+
+RUN keyword
+-> dopo il comando RUN è possibile eseguire dei comandi linux in fase di creazione del container
+  es.: RUN yum install -y wget
+  es.: RUN tar -xJC /usr/src/python --strip-components=1 -f python.tar.xz
+  es. con escape:
+  RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libexpat1 \
+    libffi6 \
+    libgdbm3 \
+    libreadline7 \
+    libsqlite3-0 \
+    libssl1.1 \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY and ADD keywords
+-> comandi per copiare o apportare determinate modifiche al file in fasi di copia
+  es.: COPY . /app -> copio tutto il contenuto della cartella in cui mi trovo all'interno della dir /app del container
+  es.: COPY ./web /app/web -> copio l'interna dir "web" dentro la dir /app del container
+  es.: COPY sample.tar /app/bin/ -> copio il file tar dentro /app/bin
+  es.: ADD sample.tar /app/bin/ -> copio il contenuto del file tar dentro /app/bin/ (decompatta in fase di copia)
+  es.: ADD http://example.com/sample.txt /data/ -> copio il file sample.txt dentro /data (esegue il download a caldo e inserisce il file nella dir)
+  es.: ADD --chown=11:22 ./data/files* /app/data/ -> copio tutti i file che iniziano per "files" dentro la dir /app/data del container e imposto 11 come utente e 22 come gruppo ai files
+  DI DEFAULT TUTTI I FILE COPIATI NEL CONTAINER HANNO 0:0 come permessi proprietari dei file
+
+WORKDIR keyword
+-> definisce la working directory che viene usata quando un container viene eseguito da una nostra immagine
+  es.: WORKDIR /app/bin
+       RUN touch sample.txt  definisco la WORKDIR /app/bin e creo il file sample.txt al suo interno
+
+CMD and ENTRYPOINT keywords
+-> definisce con ENTRYPOINT il comando e con CMD i parametri del suddetto comando
+  es.: ENTRYPOINT ["ping"] -> setto il comando ping
+       CMD ["8.8.8.8", "-c", "3"] -> passo l'indirizzo da pingare, il parametro count e infine il numero di volte che deve fare il ping
+       in alteranativa posso passare i parametri come segue CMD ping 8.8.8.8 -c 3
+
+
+docker image save -o /backup/my-alpine.tar my-alpine
+  -> effettuo il backup dell'image "my-alpine" nel file my-alpine.tar
+
+docker image load -i /backup/my-alpine.tar
+  -> effettuo il deploy di una nuova image dal backup my-alpine.tar
+
+docker image pull alpine
+  -> scarico l'immagine alpine:latest e la importo nel mio host
+
+docker image pull alpine:3.5
+  -> scarico l'immagine di alpine a una versione precisa (in questo caso la 3.5) e la importo nel mio host
+
+
+
+docker rmi $(docker images -q --filter "dangling=true")
+
+  FROM alpine:latest
+  MAINTAINER Matteo Tonon
+
+  RUN apk update
+  RUN apk add vim
+  RUN apk add curl
+
+
+  marco ragazzi
+  3487317855
+
+https://kubernetes.io/docs/tutorials/kubernetes-basics/scale-intro/
+
+https://rancher.com/managing-kubernetes-workloads-with-rancher-2-0/
+
+
+vi /usr/lib/systemd/system/docker.service
+systemctl daemon-reload
+systemctl restart docker
+
+
+vi /usr/lib/systemd/system/docker.service
+
+ExecStart=/usr/bin/dockerd --insecure-registry docker-repo:5000
+vi /etc/hosts
+
+159.100.245.160 docker-repo
+159.100.245.160 docker-engine
